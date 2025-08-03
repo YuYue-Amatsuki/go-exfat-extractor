@@ -18,14 +18,17 @@ jobs:
             ext: ""
             goos: linux
             goarch: amd64
+            artifact_name: exfat-extractor-linux
           - platform: windows
             ext: ".exe"
             goos: windows
             goarch: amd64
+            artifact_name: exfat-extractor-windows
           - platform: macos
             ext: ""
             goos: darwin
             goarch: arm64
+            artifact_name: exfat-extractor-macos
 
     steps:
     - name: Checkout code
@@ -53,13 +56,16 @@ jobs:
         CGO_ENABLED: 0
       run: |
         mkdir -p release
-        go build -v -trimpath -ldflags="-s -w" -o "release/exfat-extractor-${{ matrix.platform }}${{ matrix.ext }}" .
+        go build -v -trimpath -ldflags="-s -w" -o "release/exfat-extractor${{ matrix.ext }}" .
 
-    # 将所有文件收集到一个 Artifact
-    - name: Upload all artifacts
-      if: matrix.platform == 'macos' # 只在最后一步上传
+    - name: Rename binary for artifact
+      run: |
+        mv "release/exfat-extractor${{ matrix.ext }}" "${{ matrix.artifact_name }}${{ matrix.ext }}"
+        echo "Renamed to: ${{ matrix.artifact_name }}${{ matrix.ext }}"
+
+    - name: Upload ${{ matrix.platform }} binary
       uses: actions/upload-artifact@v4
       with:
-        name: exfat-extractor-binaries-${{ github.run_number }}
-        path: release/
+        name: ${{ matrix.artifact_name }}-${{ github.run_number }}
+        path: ${{ matrix.artifact_name }}${{ matrix.ext }}
         retention-days: 7
