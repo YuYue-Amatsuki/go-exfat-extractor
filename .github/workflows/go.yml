@@ -38,10 +38,11 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0  # 禁用 CGO 以获得静态链接的可执行文件
       run: |
+        mkdir -p bin
         go build -v -trimpath -ldflags="-s -w" -o "bin/exfat-extractor-${{ matrix.platform }}${{ matrix.ext }}" ./main.go
         
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: executables
         path: bin/
