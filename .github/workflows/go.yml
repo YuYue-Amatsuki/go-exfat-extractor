@@ -1,4 +1,4 @@
-name: Go Build
+name: exFAT Extractor Build
 
 on:
   push:
@@ -8,11 +8,11 @@ on:
 
 jobs:
   build:
-    name: Build Executables
+    name: Build Multi-Platform Binaries
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux, windows]
+        platform: [linux, windows, macos]
         include:
           - platform: linux
             ext: ""
@@ -22,7 +22,11 @@ jobs:
             ext: ".exe"
             goos: windows
             goarch: amd64
-    
+          - platform: macos
+            ext: ""
+            goos: darwin
+            goarch: arm64
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -30,11 +34,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'  # 指定你的 Go 版本
+        go-version: '1.22'
 
     - name: Initialize Go module
       run: |
-        go mod init github.com/${{ github.repository }}/exfat-extractor
+        if [ ! -f go.mod ]; then
+          go mod init github.com/${{ github.repository }}/exfat-extractor
+        fi
         go get github.com/dsoprea/go-exfat@latest
         go get github.com/dsoprea/go-logging@latest
         go get github.com/jessevdk/go-flags@latest
@@ -44,13 +50,16 @@ jobs:
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
-        CGO_ENABLED: 0  # 禁用 CGO 以获得静态链接的可执行文件
+        CGO_ENABLED: 0
       run: |
-        mkdir -p bin
-        go build -v -trimpath -ldflags="-s -w" -o "bin/exfat-extractor-${{ matrix.platform }}${{ matrix.ext }}" ./main.go
-        
-    - name: Upload artifacts
+        mkdir -p release
+        go build -v -trimpath -ldflags="-s -w" -o "release/exfat-extractor-${{ matrix.platform }}${{ matrix.ext }}" .
+
+    # 将所有文件收集到一个 Artifact
+    - name: Upload all artifacts
+      if: matrix.platform == 'macos' # 只在最后一步上传
       uses: actions/upload-artifact@v4
       with:
-        name: executables
-        path: bin/
+        name: exfat-extractor-binaries-${{ github.run_number }}
+        path: release/
+        retention-days: 7
